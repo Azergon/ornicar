@@ -8,6 +8,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <style>
     :root{--bg:#07111f;--panel:rgba(14,25,44,.92);--text:#eef6ff;--muted:#9fb2c8;--brand:#57d2ff;--brand2:#7c5cff;--shadow:0 22px 70px rgba(0,0,0,.38)}
     *{box-sizing:border-box}body{margin:0;height:100vh;overflow:hidden;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text);background:var(--bg)}
@@ -2925,6 +2926,101 @@ img.ornimon-inventory-image{
       text-align:center!important;
     }
 
+
+/* Bottom navigation: icons and labels 1.5x larger */
+.bottom-four-actions .nav-icon{
+  width:42px!important;
+  height:42px!important;
+}
+.bottom-four-actions .nav-icon svg{
+  width:36px!important;
+  height:36px!important;
+}
+.bottom-four-actions .nav-label{
+  font-size:12px!important;
+  line-height:1!important;
+}
+.bottom-four-actions .nav-action-inner{
+  gap:3px!important;
+}
+
+
+/* Bottom control cluster: move everything up 15px and enlarge the background card */
+.right-actions{
+  bottom:27px!important; /* was 12px: +15px upward */
+  height:194px!important;
+}
+.bottom-four-actions{
+  height:98px!important;
+  padding:8px!important;
+  border-radius:26px!important;
+}
+.bottom-four-actions .action-btn{
+  height:80px!important;
+}
+.report-main-btn{
+  transform:translateY(-15px)!important;
+}
+
+
+.bottom-four-actions{
+  position:relative!important;
+  height:41px!important;
+  min-height:71px!important;
+  max-height:71px!important;
+  padding:3px 5px!important;
+  border-radius:20px!important;
+  align-items:center!important;
+}
+
+.leaflet-top.leaflet-left{
+  top:72px!important;
+  left:19px!important;
+  transform:none!important;
+  margin:0!important;
+}
+
+.leaflet-control-zoom a:first-child{
+  border-radius:16px 16px 0 0!important;
+}
+
+.leaflet-control-zoom a:last-child{
+  border-radius:0 0 16px 16px!important;
+}
+
+
+.leaflet-top.leaflet-left{
+  top:72px!important;
+  left:19px!important;
+  transform:none!important;
+  margin:0!important;
+}
+
+.leaflet-control-zoom{
+  border-radius:14px!important;
+  overflow:hidden!important;
+}
+
+.leaflet-control-zoom a:first-child{
+  border-radius:14px 14px 0 0!important;
+}
+
+.leaflet-control-zoom a:last-child{
+  border-radius:0 0 14px 14px!important;
+}
+
+
+#infoModal .info-copy{
+  text-align:justify!important;
+  text-justify:inter-word!important;
+}
+
+
+#aiModal .ai-disclaimer .ai-copy{
+  text-align:justify!important;
+  text-justify:inter-word!important;
+}
+
 </style>
   <link rel="preload" as="image" href="./ornicarlogo1.png">
   <link rel="preload" as="image" href="./ornicarlogo2.png">
@@ -3191,8 +3287,6 @@ img.ornimon-inventory-image{
         <div class="card info-section-card global-history-expanded">
           <strong>Historique de toutes les averses</strong>
           <div id="globalHistoryTable"></div>
-        <div class="card info-section-card demo-history-card"><strong>Cas en attente</strong><div class="info-copy">Exemples fictifs pour tester le workflow de validation.</div><div id="demoPendingHistory"></div></div>
-        <div class="card info-section-card demo-history-card"><strong>Réclamations</strong><div class="info-copy">Historique fictif de réclamations et corrections.</div><div id="demoComplaintHistory"></div></div>
         </div>
       </div>
     </section>
@@ -3566,7 +3660,13 @@ img.ornimon-inventory-image{
         </div>
         <div id="terminusDropdownList" class="report-inline-dropdown" hidden></div>
       </div>
-      
+      <div class="field">
+        <select id="controllersCountInput" aria-label="Nombre de contrôleurs" required>
+          <option value="">Nombre de contrôleurs</option>
+          <option value="1">1 contrôleur</option><option value="2">2 contrôleurs</option><option value="3">3 contrôleurs</option><option value="4">4 contrôleurs</option><option value="5">5 contrôleurs</option>
+          <option value="6">6 contrôleurs</option><option value="7">7 contrôleurs</option><option value="8">8 contrôleurs</option><option value="9">9 contrôleurs</option><option value="10">10 contrôleurs</option>
+        </select>
+      </div>
       <div class="field"><textarea id="descriptionInput" placeholder="Description (minimum 12 caractères)" required></textarea></div>
       <button class="submit orange-submit" id="submitReport" type="submit" disabled>Envoyer</button>
     </form>
@@ -4374,35 +4474,105 @@ function getPredictionWeatherIcon(value){
       if(p<80)return'🌧️';
       return'⛈️';
     }
+/* Shared Firestore v2: index.html and crmdb.html use the same source of truth. */
 const FIREBASE_CONFIG={
-      apiKey:'AIzaSyBnzdTUJpXRz7IJAmtkRcSYL1MitPZUKM8',
-      authDomain:'ornicar-a37d9.firebaseapp.com',
-      projectId:'ornicar-a37d9',
-      storageBucket:'ornicar-a37d9.firebasestorage.app',
-      messagingSenderId:'330525096196',
-      appId:'1:330525096196:web:5ec86c79d44b12f6b47851',
-      measurementId:'G-KBZR08DR9P'
-    };
-const FIREBASE_COLLECTIONS={
-  pending:'reports_pending',
-  active:'active_alerts',
-  archive:'archived_alerts',
-  history:'control_history_v2',
-  forecasts:'station_forecasts',
-  mail:'mail',
-  complaints:'complaints',
-  users:'users'
+  apiKey:'AIzaSyBnzdTUJpXRz7IJAmtkRcSYL1MitPZUKM8',
+  authDomain:'ornicar-a37d9.firebaseapp.com',
+  projectId:'ornicar-a37d9',
+  storageBucket:'ornicar-a37d9.firebasestorage.app',
+  messagingSenderId:'330525096196',
+  appId:'1:330525096196:web:5ec86c79d44b12f6b47851',
+  measurementId:'G-KBZR08DR9P'
 };
+const FIREBASE_COLLECTIONS={alerts:'alerts',issues:'issues',users:'users',userStats:'user_stats',badges:'badges',userBadges:'user_badges',userGameStats:'user_game_stats',stops:'stops',lines:'lines',forecasts:'station_forecasts',forecastConfig:'forecast_config'};
 const ORNICAR_STATUS={
   report:{pending:'pending',rejected:'rejected'},
-  control:{active:'active',ended:'ended',archived:'archived'},
-  complaint:{pending:'pending',resolved:'resolved',archived:'archived'},
+  control:{active:'active',ended:'ended'},
+  complaint:{open:'open',resolved:'resolved',closed:'closed'},
   user:{pending:'pending',validated:'validated',rejected:'rejected',suspended:'suspended',banned:'banned'}
 };
-let firebaseDb=null,firebaseEnabled=false;
-function initFirebase(){try{if(!window.firebase)return false;if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);firebaseDb=firebase.firestore();firebaseEnabled=true;return true;}catch(error){console.warn('Firebase init failed:',error);firebaseEnabled=false;return false;}}
-function firebaseAdd(collection,item,id=item.id){if(!firebaseEnabled||!firebaseDb)return Promise.resolve(false);return firebaseDb.collection(collection).doc(String(id)).set({...item,updated_at:new Date().toISOString()},{merge:true}).then(()=>true).catch(e=>{console.warn(e);return false;});}
-function firebaseDelete(collection,id){if(!firebaseEnabled||!firebaseDb||!id)return Promise.resolve(false);return firebaseDb.collection(collection).doc(String(id)).delete().then(()=>true).catch(e=>{console.warn(e);return false;});}
+let firebaseDb=null,firebaseAuth=null,firebaseEnabled=false,FIREBASE_AUTH_READY=Promise.resolve(null);
+let REMOTE_LINES=new Map(),REMOTE_STOP_DOCS=[],FORECAST_CONFIG={},REMOTE_USER_BADGES=new Set();
+
+function initFirebase(){
+  try{
+    if(!window.firebase)return false;
+    if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseDb=firebase.firestore();
+    firebaseAuth=typeof firebase.auth==='function'?firebase.auth():null;
+    firebaseEnabled=true;
+    if(firebaseAuth){
+      FIREBASE_AUTH_READY=(async()=>{
+        try{
+          try{await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(e){}
+          if(firebaseAuth.currentUser)return firebaseAuth.currentUser;
+          const cred=await firebaseAuth.signInAnonymously();
+          return cred.user||firebaseAuth.currentUser||null;
+        }catch(error){console.warn('Anonymous Firebase Auth unavailable.',error);return null;}
+      })();
+    }
+    return true;
+  }catch(error){console.warn('Firebase init failed:',error);firebaseEnabled=false;return false;}
+}
+async function ensureFirebaseAuthUser(){
+  if(!firebaseEnabled&&!initFirebase())return null;
+  try{return await FIREBASE_AUTH_READY;}catch(e){return null;}
+}
+async function reconcileProfileWithFirebaseAuth(){
+  const authUser=await ensureFirebaseAuthUser();if(!authUser||!firebaseDb)return authUser;
+  const uid=authUser.uid;
+  try{
+    const doc=await firebaseDb.collection(FIREBASE_COLLECTIONS.users).doc(uid).get();
+    if(doc.exists){
+      const remote=canonicalUserView(doc.data(),doc.id);
+      USER_PROFILE={...(USER_PROFILE||{}),...remote,uid};USER_ACCOUNT_DATA=remote;USER_ACCOUNT_STATUS=remote.status||ORNICAR_STATUS.user.pending;localStorage.setItem(PROFILE_KEY,JSON.stringify(USER_PROFILE));return authUser;
+    }
+    if(USER_PROFILE?.username){
+      const created=USER_PROFILE.created_at||new Date().toISOString();
+      USER_PROFILE={...USER_PROFILE,uid,status:ORNICAR_STATUS.user.pending,created_at:created,validated_at:null,suspended_until:null};
+      USER_ACCOUNT_STATUS=ORNICAR_STATUS.user.pending;USER_ACCOUNT_DATA={...USER_PROFILE};saveUserProfile();
+      await firebaseAdd(FIREBASE_COLLECTIONS.users,{uid,username:USER_PROFILE.username,status:ORNICAR_STATUS.user.pending,created_at:created,validated_at:null,suspended_until:null,last_seen_at:new Date().toISOString()},uid);
+    }
+  }catch(error){console.warn('Profile/Auth reconciliation failed',error);}
+  return authUser;
+}
+async function firebaseAdd(collection,item,id=item?.id){
+  if(!firebaseEnabled||!firebaseDb||!id)return false;
+  try{await firebaseDb.collection(collection).doc(String(id)).set({...item,updated_at:new Date().toISOString()},{merge:true});return true;}catch(error){console.warn('Firestore write failed',collection,id,error);return false;}
+}
+async function firebaseDelete(collection,id){if(!firebaseEnabled||!firebaseDb||!id)return false;try{await firebaseDb.collection(collection).doc(String(id)).delete();return true;}catch(e){console.warn(e);return false;}}
+async function firebaseIncrement(collection,id,fields){
+  if(!firebaseEnabled||!firebaseDb||!id)return false;
+  const data={updated_at:new Date().toISOString()};Object.entries(fields||{}).forEach(([k,v])=>data[k]=firebase.firestore.FieldValue.increment(Number(v)||0));
+  try{await firebaseDb.collection(collection).doc(String(id)).set(data,{merge:true});return true;}catch(e){console.warn(e);return false;}
+}
+function firestoreSafeId(value){const base=String(value||'item').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,90)||'item';return base;}
+function stopIdForName(name){return `stop-${firestoreSafeId(normalizeStopName(name))}`;}
+function numberProbability(value,fallback=0){const n=Number(String(value??'').replace('%','').replace(',','.'));return Number.isFinite(n)?Math.max(0,Math.min(100,n)):fallback;}
+function probabilityView(value,fallback='—'){const n=numberProbability(value,NaN);return Number.isFinite(n)?`${Math.round(n)}%`:fallback;}
+function canonicalAlertView(raw,id=raw?.id){
+  const statusRaw=String(raw?.status||'pending').toLowerCase(),status=statusRaw==='validated'?'active':statusRaw==='archived'?'ended':statusRaw;
+  const stopName=raw?.stop_name||raw?.station||'',lineCode=raw?.line_code||raw?.line||'',destination=raw?.destination||raw?.terminus||raw?.direction||'',userId=raw?.user_id||raw?.user_uid||'',usernameSnapshot=raw?.username_snapshot||raw?.username||'';
+  return {...raw,id:id||raw?.id,stop_id:raw?.stop_id||stopIdForName(stopName),stop_name:stopName,line_code:lineCode,destination,user_id:userId,username_snapshot:usernameSnapshot,status,station:stopName,line:lineCode,terminus:destination,user_uid:userId,username:usernameSnapshot};
+}
+function alertDbPayload(item){const x=canonicalAlertView(item,item?.id);return {id:x.id,stop_id:x.stop_id||stopIdForName(x.stop_name),stop_name:normalizeStopName(x.stop_name),line_code:x.line_code||'',destination:x.destination||'',description:x.description||'',controllers_count:Number(x.controllers_count??x.controllers??x.intensity??0)||0,status:x.status,user_id:x.user_id||'',username_snapshot:x.username_snapshot||'',source_type:x.source_type||'user',created_at:x.created_at||new Date().toISOString(),validated_at:x.validated_at||null,ended_at:x.ended_at||null,rejected_at:x.rejected_at||null,updated_at:new Date().toISOString(),visible_public:x.status==='active'};}
+function issueDbPayload(item){const stopName=item?.stop_name||item?.station||'',lineCode=item?.line_code||item?.line||'',destination=item?.destination||item?.terminus||item?.direction||'',userId=item?.user_id||item?.user_uid||'',usernameSnapshot=item?.username_snapshot||item?.username||'';return {id:item.id,type:item.type||'suggestion',status:String(item.status||'open')==='pending'?'open':item.status||'open',stop_id:item.stop_id||(stopName?stopIdForName(stopName):''),stop_name:stopName?normalizeStopName(stopName):'',line_code:lineCode,destination,description:item.description||item.message||'',user_id:userId,username_snapshot:usernameSnapshot,created_at:item.created_at||new Date().toISOString(),updated_at:new Date().toISOString(),resolved_at:item.resolved_at||null,closed_at:item.closed_at||null};}
+function canonicalUserView(raw,id=raw?.id){return {...raw,id:id||raw?.id,uid:raw?.uid||id||raw?.id,last_seen:raw?.last_seen_at||raw?.last_seen||null,last_seen_at:raw?.last_seen_at||raw?.last_seen||null};}
+function forecastView(raw){const n=numberProbability(raw?.probability??raw?.percent,NaN);return {...raw,probability:Number.isFinite(n)?`${Math.round(n)}%`:'—',percent:Number.isFinite(n)?`${Math.round(n)}%`:'—'};}
+function gameStatsDbPayload(stats){
+  return {ornimons:{played:!!stats.played_ornimons,caught_ids:Array.isArray(stats.ornimons_caught_ids)?stats.ornimons_caught_ids:[],caught_names:Array.isArray(stats.ornimons_caught)?stats.ornimons_caught:[],captured_at:stats.ornimons_captured_at||{},captured_stop_names:stats.ornimons_captured_station||{}},memornicar:{played:!!stats.played_memory,best_moves:Number(stats.memory_best||0)||0},xox:{played:!!stats.played_xox,wins:Number(stats.xox_wins||0)||0},orni4:{played:!!stats.played_connect,wins:Number(stats.connect_wins||0)||0},ornicameleon:{best_found:Number(stats.ornicameleon_best||0)||0,best_time_left:Number(stats.ornicameleon_time_left||0)||0},updated_at:new Date().toISOString()};
+}
+function mergeGameStatsFromDb(data){
+  if(!data)return;
+  const orn=data.ornimons||{},mem=data.memornicar||{},xox=data.xox||{},o4=data.orni4||{},cam=data.ornicameleon||{};
+  GAME_STATS={...GAME_STATS,played_ornimons:!!orn.played,ornimons_caught_ids:orn.caught_ids||GAME_STATS.ornimons_caught_ids||[],ornimons_caught:orn.caught_names||GAME_STATS.ornimons_caught||[],ornimons_captured_at:orn.captured_at||GAME_STATS.ornimons_captured_at||{},ornimons_captured_station:orn.captured_stop_names||GAME_STATS.ornimons_captured_station||{},played_memory:!!mem.played,memory_best:Number(mem.best_moves||GAME_STATS.memory_best||0)||0,played_xox:!!xox.played,xox_wins:Number(xox.wins||GAME_STATS.xox_wins||0)||0,played_connect:!!o4.played,connect_wins:Number(o4.wins||GAME_STATS.connect_wins||0)||0,ornicameleon_best:Number(cam.best_found||GAME_STATS.ornicameleon_best||0)||0,ornicameleon_time_left:Number(cam.best_time_left||GAME_STATS.ornicameleon_time_left||0)||0};
+}
+function rebuildRemoteNetwork(){
+  if(!REMOTE_STOP_DOCS.length)return;
+  const rebuilt=REMOTE_STOP_DOCS.map(doc=>{const codes=Array.isArray(doc.line_codes)?doc.line_codes:[];const lines=codes.map(code=>{const ld=REMOTE_LINES.get(code)||{};const parsed=parseLineCode(code);if(!parsed)return null;parsed.termini=Array.isArray(ld.termini)?ld.termini:(TERMINI[code]||[]);return parsed;}).filter(Boolean);return{id:doc.id||stopIdForName(doc.name),name:normalizeStopName(doc.name||doc.normalized_name),lat:Number(doc.lat),lon:Number(doc.lng),transports:[...new Set(lines.map(l=>l.transport))],lines,_default_probability:numberProbability(doc.default_probability,10)};}).filter(x=>x.name&&Number.isFinite(x.lat)&&Number.isFinite(x.lon));
+  if(rebuilt.length){ALL_STOPS=rebuilt.sort((a,b)=>a.name.localeCompare(b.name,'fr'));renderMap();renderControls();}
+}
+
 const DEFAULT_40_PERCENT_STATIONS=new Set(['PORTE DE HAL','ROGIER','DE BROUCKERE','PORTE DE NAMUR','SCIENCES','SIMONIS','ELISABETH','GARE DU MIDI','DIAMANT','MONTGOMERY','ARTS-LOI','BOTANIQUE','TRONE','TRÔNE','MADOU','YSER','MERODE','BOCKSTAEL','BELGICA','RIBAUCOURT','PANNENHUIS','HOUBA-BRUGMANN'].map(normalizeStopName));
 const DEFAULT_70_PERCENT_STATIONS=new Set(['GARE CENTRALE','SCHUMAN','LOUISE','GARE DE L’OUEST','GARE DE L\'OUEST','BEEKKANT','PARVIS SAINT-GILLES','PARVIS ST-GILLES','FLAGEY','ALBERT','LEMONNIER','ANNEESSENS','MEISER','PLACE MEISER','GARE DU NORD','VANDERKINDERE','BUYL','JANSON','BAILLI','SAINTE-CATHERINE','COMTE DE FLANDRE','CLEMENCEAU','CLÉMENCEAU','SAINT-GUIDON','ST-GUIDON','VEEWEYDE','DELTA','HERMANN-DEBROUX','HERRMANN-DEBROUX','STOCKEL','ERASME','CHURCHILL','VAN PRAET','DOCKS BRUXSEL','DOCKS BRUXELLES','ROSA PARKS','HORTA','LIEDTS'].map(normalizeStopName));
 function getDefaultPredictionScore(station){const n=normalizeStopName(station);if(DEFAULT_70_PERCENT_STATIONS.has(n))return 70;if(DEFAULT_40_PERCENT_STATIONS.has(n))return 40;return 10;}
@@ -4472,22 +4642,39 @@ function enforceAccountAccess(){
 }
 
 function safeJsonParse(value,fallback){try{return JSON.parse(value)||fallback}catch{return fallback}}
-function createLocalUid(){return (crypto?.randomUUID?.()||('orn-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10))).replace(/\s/g,'');}
+function createLocalUid(){return firebaseAuth?.currentUser?.uid||(crypto?.randomUUID?.()||('orn-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10))).replace(/\s/g,'');}
 function loadUserState(){
   USER_PROFILE=safeJsonParse(localStorage.getItem(PROFILE_KEY),null);
   LOCAL_PENDING_REPORTS=safeJsonParse(localStorage.getItem(LOCAL_PENDING_KEY),[]);
   GAME_STATS=safeJsonParse(localStorage.getItem(GAME_STATS_KEY),{});
 }
-function saveUserProfile(){if(USER_PROFILE)localStorage.setItem(PROFILE_KEY,JSON.stringify(USER_PROFILE));}
+let CLOUD_SYNC_TIMER=null,GAME_SYNC_TIMER=null;
+function saveUserProfile(){
+  if(USER_PROFILE)localStorage.setItem(PROFILE_KEY,JSON.stringify(USER_PROFILE));
+  clearTimeout(CLOUD_SYNC_TIMER);CLOUD_SYNC_TIMER=setTimeout(syncUserCloudState,250);
+}
 function savePendingReports(){localStorage.setItem(LOCAL_PENDING_KEY,JSON.stringify(LOCAL_PENDING_REPORTS));}
-function saveGameStats(){localStorage.setItem(GAME_STATS_KEY,JSON.stringify(GAME_STATS));}
+function saveGameStats(){
+  localStorage.setItem(GAME_STATS_KEY,JSON.stringify(GAME_STATS));
+  clearTimeout(GAME_SYNC_TIMER);GAME_SYNC_TIMER=setTimeout(()=>{if(firebaseEnabled&&USER_PROFILE?.uid)firebaseAdd(FIREBASE_COLLECTIONS.userGameStats,gameStatsDbPayload(GAME_STATS),USER_PROFILE.uid);},250);
+}
+async function syncUserCloudState(){
+  if(!firebaseEnabled||!USER_PROFILE?.uid)return;
+  const uid=USER_PROFILE.uid;
+  await firebaseAdd(FIREBASE_COLLECTIONS.users,{uid,username:USER_PROFILE.username||'',last_seen_at:new Date().toISOString()},uid);
+  await firebaseAdd(FIREBASE_COLLECTIONS.userStats,{streak_days:Number(USER_PROFILE.streak_days||0),last_open_date:USER_PROFILE.last_open_date||null,used_weekend:!!USER_PROFILE.used_weekend,used_night:!!USER_PROFILE.used_night,used_morning:!!USER_PROFILE.used_morning,stations_viewed:Number(USER_PROFILE.stations_viewed||0)},uid);
+}
+function syncUnlockedBadges(unlocked){
+  if(!firebaseEnabled||!USER_PROFILE?.uid)return;
+  unlocked.forEach(b=>{if(REMOTE_USER_BADGES.has(b.id))return;REMOTE_USER_BADGES.add(b.id);firebaseAdd(FIREBASE_COLLECTIONS.userBadges,{user_id:USER_PROFILE.uid,badge_id:b.id,badge_name:b.name,unlocked_at:new Date().toISOString()},`${USER_PROFILE.uid}_${b.id}`);});
+}
 function formatProfileCreated(value){
   const d=new Date(value);if(Number.isNaN(d.getTime()))return'—';
   return `${String(d.getDate()).padStart(2,'0')}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getFullYear()).slice(-2)}`;
 }
 function currentUsername(){return USER_PROFILE?.username||'Anonyme';}
 function getContribCount(){return Number(localStorage.getItem(CONTRIB_KEY)||0);}
-function incrementContribution(){localStorage.setItem(CONTRIB_KEY,String(getContribCount()+1));}
+function incrementContribution(){localStorage.setItem(CONTRIB_KEY,String(getContribCount()+1));if(firebaseEnabled&&USER_PROFILE?.uid)firebaseIncrement(FIREBASE_COLLECTIONS.userStats,USER_PROFILE.uid,{contributions_count:1});}
 function addLocalPending(report){
   LOCAL_PENDING_REPORTS.unshift(report);savePendingReports();renderControls();renderProfile();
 }
@@ -4499,24 +4686,23 @@ function reconcileLocalPending(){
 }
 loadUserState();
 
-/* Clean Firebase test build: remove old test/demo browser state once. */
-const CLEAN_FIREBASE_TEST_KEY='ornicar_clean_firebase_test_v1';
-if(localStorage.getItem(CLEAN_FIREBASE_TEST_KEY)!=='1'){
-  [
-    PROFILE_KEY,
-    LOCAL_PENDING_KEY,
-    'ornicar_linked_seed_v1',
-    'ornicar_linked_test_dataset_v1',
-    'ornicar_local_complaints_v1'
-  ].forEach(k=>localStorage.removeItem(k));
-  USER_PROFILE=null;
-  LOCAL_PENDING_REPORTS=[];
-  USER_ACCOUNT_STATUS=ORNICAR_STATUS.user.pending;
-  USER_ACCOUNT_DATA=null;
-  localStorage.setItem(CLEAN_FIREBASE_TEST_KEY,'1');
+/* Production profile bootstrap: legacy local demo profile is removed, real cached profiles remain as offline cache. */
+if(USER_PROFILE&&(String(USER_PROFILE.uid||'')==='ORN-EWE-0001'||String(USER_PROFILE.username||'').toLowerCase()==='ewe')){
+  localStorage.removeItem(PROFILE_KEY);USER_PROFILE=null;
 }
 USER_ACCOUNT_STATUS=USER_PROFILE?.status||ORNICAR_STATUS.user.pending;
 USER_ACCOUNT_DATA=USER_PROFILE||null;
+enforceGameAccessFromAccountStatus();
+
+
+function enforceGameAccessFromAccountStatus(){
+  const validated=USER_ACCOUNT_STATUS===ORNICAR_STATUS.user.validated
+    && (USER_PROFILE?.status||USER_ACCOUNT_DATA?.status)===ORNICAR_STATUS.user.validated;
+  if(!validated && isGameModeUnlocked()){
+    localStorage.setItem(GAME_MODE_KEY,'0');
+    applyGameModeVisibility();
+  }
+}
 
 function isGameModeUnlocked(){
   return localStorage.getItem(GAME_MODE_KEY)==='1';
@@ -4530,11 +4716,33 @@ function applyGameModeVisibility(){
   if(gameBadges)gameBadges.classList.toggle('game-badges-hidden',!unlocked);
 }
 function toggleGameMode(){
-  const next=!isGameModeUnlocked();
-  localStorage.setItem(GAME_MODE_KEY,next?'1':'0');
+  const currentlyUnlocked=isGameModeUnlocked();
+  const wantsToUnlock=!currentlyUnlocked;
+
+  if(wantsToUnlock){
+    const validated=USER_ACCOUNT_STATUS===ORNICAR_STATUS.user.validated
+      && (USER_PROFILE?.status||USER_ACCOUNT_DATA?.status)===ORNICAR_STATUS.user.validated;
+
+    if(!validated){
+      localStorage.setItem(GAME_MODE_KEY,'0');
+      applyGameModeVisibility();
+      renderProfile();
+
+      const modal=document.getElementById('accountPendingModal');
+      const title=document.getElementById('accountPendingTitle');
+      const txt=document.getElementById('accountPendingText');
+      if(title)title.textContent='Mode jeux en attente';
+      if(txt)txt.textContent='Ton inscription doit d’abord être vérifiée et validée par un administrateur. Patiente quelques minutes puis réessaie.';
+      if(modal)modal.classList.add('open');
+      else showToast('Le mode jeux sera disponible après validation de ton inscription par un administrateur.',3200);
+      return;
+    }
+  }
+
+  localStorage.setItem(GAME_MODE_KEY,wantsToUnlock?'1':'0');
   applyGameModeVisibility();
   renderProfile();
-  showToast(next?'Mode jeux activé.':'Mode jeux masqué.',1800);
+  showToast(wantsToUnlock?'Mode jeux activé.':'Mode jeux masqué.',1800);
 }
 
 (function updateUsageProfile(){
@@ -4557,6 +4765,39 @@ function toggleGameMode(){
 
 
 let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
+
+const ORNICAR_SHARED_HISTORY_KEY='ornicar_shared_control_history_v1';
+
+function readSharedAdminHistory(){
+  try{
+    const rows=JSON.parse(localStorage.getItem(ORNICAR_SHARED_HISTORY_KEY)||'[]');
+    return Array.isArray(rows)?rows:[];
+  }catch(e){return[];}
+}
+function isRealAverseHistoryRow(row){
+  if(!row||typeof row!=='object')return false;
+  const status=String(row.status||'').toLowerCase();
+  const type=String(row.type||row.kind||row.archiveSource||'').toLowerCase();
+  if(['pending','open','rejected'].includes(status))return false;
+  if(type.includes('complaint')||type.includes('reclamation')||type.includes('pending'))return false;
+  return !!(row.station||row.line||row.terminus||row.direction);
+}
+function syncAdminHistoryToIndex(){
+  if(firebaseEnabled)return;
+  ARCHIVED_HISTORY=readSharedAdminHistory()
+    .filter(isRealAverseHistoryRow)
+    .sort((a,b)=>{
+      const av=new Date(a.ended_at||a.archived_at||a.updated_at||a.created_at||0).getTime()||0;
+      const bv=new Date(b.ended_at||b.archived_at||b.updated_at||b.created_at||0).getTime()||0;
+      return bv-av;
+    });
+  renderGlobalHistory();
+}
+window.addEventListener('storage',e=>{
+  if(e.key===ORNICAR_SHARED_HISTORY_KEY)syncAdminHistoryToIndex();
+});
+setInterval(syncAdminHistoryToIndex,1200);
+
     function getPredictionWeatherMapHtml(value){
       const p=Math.max(0,Math.min(100,Number(String(value||'').replace('%',''))||0));
       if(p>=40&&p<60){
@@ -4566,7 +4807,7 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
     }
     function iconForPrediction(p){return L.divIcon({html:`<div class="forecast-marker">${getPredictionWeatherMapHtml(p.probability||'10%')}</div>`,className:'',iconSize:[36,36],iconAnchor:[18,18]});}
     function incidentIcon(){return L.divIcon({html:'<div class="incident-marker">!</div>',className:'',iconSize:[37,37],iconAnchor:[18,18]});}
-    function getForecastForStop(stop){const f=FORECASTS.get(normalizeStopName(stop.name));return f?.probability||`${getDefaultPredictionScore(stop.name)}%`;}
+    function getForecastForStop(stop){const f=FORECASTS.get(normalizeStopName(stop.name));return f?.probability||`${numberProbability(stop?._default_probability??getDefaultPredictionScore(stop.name),10)}%`;}
     function distanceKm(a,b){const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLon=(b.lon-a.lon)*Math.PI/180;const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
     function getBufferedVisibleStops(){
       const padded=map.getBounds().pad(VIEWPORT_PRELOAD_PAD);
@@ -4657,7 +4898,7 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
     document.getElementById('profileCloseBtn').onclick=()=>document.getElementById('profileModal').classList.remove('open');
     document.getElementById('profileModal').onclick=e=>{if(e.target===document.getElementById('profileModal'))document.getElementById('profileModal').classList.remove('open');};
     document.getElementById('accountPendingCloseBtn').onclick=()=>document.getElementById('accountPendingModal').classList.remove('open');
-    $('infoTopBtn').onclick=()=>{renderGlobalHistory();renderDemoCaseHistories();$('infoModal').classList.add('open');};$('infoCloseBtn').onclick=()=>$('infoModal').classList.remove('open');$('infoModal').onclick=e=>{if(e.target===$('infoModal'))$('infoModal').classList.remove('open');};document.getElementById('openControls').onclick=()=>{renderControls();openModal('controlsModal');};document.getElementById('openStops').onclick=()=>{renderStops();renderStopSearchDropdown(document.getElementById('stopSearch').value);closeStopSearchDropdown();openModal('stopsModal');};document.getElementById('openReport').onclick=()=>{if(!userCanSubmit()){showPendingValidation();return;}openModal('reportModal');};
+    $('infoTopBtn').onclick=()=>{syncAdminHistoryToIndex();renderGlobalHistory();$('infoModal').classList.add('open');};$('infoCloseBtn').onclick=()=>$('infoModal').classList.remove('open');$('infoModal').onclick=e=>{if(e.target===$('infoModal'))$('infoModal').classList.remove('open');};document.getElementById('openControls').onclick=()=>{renderControls();openModal('controlsModal');};document.getElementById('openStops').onclick=()=>{renderStops();renderStopSearchDropdown(document.getElementById('stopSearch').value);closeStopSearchDropdown();openModal('stopsModal');};document.getElementById('openReport').onclick=()=>{if(!userCanSubmit()){showPendingValidation();return;}openModal('reportModal');};
     function getAlertCreatedDate(alert){
       if(!alert)return null;
       const values=[alert.created_at,alert.createdAt,alert.submitted_at,alert.submittedAt,alert.reported_at,alert.reportedAt,alert.validated_at,alert.updated_at];
@@ -4976,11 +5217,15 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
     function showToast(msg,d=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),d);}
     document.getElementById('reportForm').onsubmit=async e=>{
       e.preventDefault();
-      if(!USER_PROFILE){ensureUsernameProfile();return;} if(!userCanSubmit()){showPendingValidation();return;}
+      const authUser=await ensureFirebaseAuthUser();
+      if(!authUser){showToast('Firebase Auth indisponible.',2600);return;}
+      await reconcileProfileWithFirebaseAuth();
+      if(!USER_PROFILE){ensureUsernameProfile();return;} if(USER_PROFILE.uid!==authUser.uid){showToast('Profil Firebase non synchronisé.',2600);return;} if(!userCanSubmit()){showPendingValidation();return;}
       const selectedStop=getReportSelectedStop();
       if(!selectedStop){showToast('Choisis une station valide.',2200);openReportStationDropdown();return;}
       if(!lineInput.value){showToast('Choisis une ligne.',2200);lineDropdownBtn.click();return;}
       if(!terminusInput.value){showToast('Choisis une direction.',2200);terminusDropdownBtn.click();return;}
+      if(!document.getElementById('controllersCountInput')?.value){showToast('Choisis le nombre de contrôleurs.',2200);return;}
       const now=new Date();
       const report={
         id:'pending-'+Date.now(),
@@ -4988,6 +5233,7 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
         line:document.getElementById('lineInput').value,
         terminus:document.getElementById('terminusInput').value,
         description:document.getElementById('descriptionInput').value.trim(),
+        controllers_count:Number(document.getElementById('controllersCountInput')?.value||0),
         time:now.toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'}),
         created_at:now.toISOString(),
         status:ORNICAR_STATUS.report.pending,
@@ -4996,13 +5242,13 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
         username:USER_PROFILE.username,
         user_created_at:USER_PROFILE.created_at
       };
-      const savedReport=await firebaseAdd(FIREBASE_COLLECTIONS.pending,report,report.id);
+      const savedReport=await firebaseAdd(FIREBASE_COLLECTIONS.alerts,alertDbPayload({...report,stop_id:stopIdForName(report.station),stop_name:report.station,line_code:report.line,destination:report.terminus,user_id:report.user_uid,username_snapshot:report.username}),report.id);
       if(!savedReport){
         showToast('Envoi impossible : Firebase est indisponible.',3000);
         return;
       }
       addLocalPending({...report,local_only:false});
-      USER_PROFILE.reports_count=Number(USER_PROFILE.reports_count||0)+1;saveUserProfile();incrementContribution();
+      USER_PROFILE.reports_count=Number(USER_PROFILE.reports_count||0)+1;saveUserProfile();if(firebaseEnabled&&USER_PROFILE?.uid)firebaseIncrement(FIREBASE_COLLECTIONS.userStats,USER_PROFILE.uid,{reports_submitted:1});incrementContribution();
       closeModals();showToast('C’est enregistré. Ton signalement est en attente de validation.',3000);
       e.target.reset();
       lineInput.value='';lineInputDisplay.value='';lineInputDisplay.placeholder='Choisir une station valide';lineInputDisplay.disabled=true;lineDropdownBtn.disabled=true;lineDropdownList.innerHTML='';
@@ -5061,7 +5307,7 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
     }
     function getEndedHistory(){
       const real=ARCHIVED_HISTORY.filter(x=>{const s=String(x.status||'').toLowerCase(),src=String(x.archiveSource||x.source||'').toLowerCase();return s==='ended'||src==='finished'||src==='ended';});
-      return [...SYNTHETIC_ENDED_HISTORY,...real];
+      return firebaseEnabled?real:(real.length?real:[...SYNTHETIC_ENDED_HISTORY]);
     }
     function parseHistoryDate(item){for(const v of [item.ended_at,item.endedAt,item.archivedAt,item.updated_at,item.created_at]){if(!v)continue;const d=new Date(v);if(!Number.isNaN(d.getTime()))return d;}return null;}
     function historyHour(item){const m=String(item.time||'').match(/(\d{1,2}):(\d{2})/);if(m)return Math.max(0,Math.min(23,Number(m[1])));const d=parseHistoryDate(item);return d?d.getHours():null;}
@@ -5095,7 +5341,7 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
         return true;
       });
     }
-    function renderAIAnalytics(){
+    function renderAIAnalyticsLocalFallback(){
       const ended=getFilteredAIHistory();
       const latest=new Date('2026-08-15T23:59:59'),d7=new Date(latest-7*86400000),d30=new Date(latest-30*86400000);
       const dated=ended.map(item=>({item,date:parseHistoryDate(item)}));
@@ -5143,6 +5389,82 @@ let ACTIVE_ALERTS=[],ARCHIVED_HISTORY=[],FORECASTS=new Map();
         ? `<div class="ai-table-wrap"><table class="ai-table"><thead><tr><th>Station</th><th>Indice</th><th>Tendance</th></tr></thead><tbody>${predictionRows.join('')}</tbody></table></div>`
         : '<div class="ai-copy">Aucune estimation disponible avec les filtres actuels.</div>';
     }
+
+const ORNICAR_SHARED_FORECAST_KEY='ornicar_shared_forecast_dashboard_v1';
+
+function readSharedForecastDashboard(){
+  try{
+    const data=JSON.parse(localStorage.getItem(ORNICAR_SHARED_FORECAST_KEY)||'null');
+    return data&&typeof data==='object'?data:null;
+  }catch(e){return null;}
+}
+function forecastEscape(value){
+  return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function filterForecastStationRows(rows){
+  const q=(document.getElementById('aiSearch')?.value||'').trim().toLowerCase();
+  if(!q)return rows||[];
+  return (rows||[]).filter(x=>String(x.station||'').toLowerCase().includes(q));
+}
+function renderSharedForecastDashboard(){
+  if(firebaseEnabled)return false;
+  const data=readSharedForecastDashboard();
+  if(!data)return false;
+
+  const subtitle=document.querySelector('#aiModal .ai-subtitle');
+  if(subtitle)subtitle.textContent=data.subtitle||'Indicateurs, tendances et statistiques prévisionnelles';
+
+  const kpis=Array.isArray(data.kpis)?data.kpis:[];
+  const kpiTarget=document.getElementById('aiKpis');
+  if(kpiTarget)kpiTarget.innerHTML=kpis.map(x=>`<div class="ai-kpi"><span>${forecastEscape(x.label)}</span><strong>${forecastEscape(x.value)}</strong></div>`).join('');
+
+  const tops=filterForecastStationRows(data.topStations);
+  const max=Math.max(1,...tops.map(x=>Number(x.count)||0));
+  const topTarget=document.getElementById('aiTopStations');
+  if(topTarget)topTarget.innerHTML=tops.length?tops.map(x=>`<div class="ai-bar-row"><span>${forecastEscape(String(x.station||'').slice(0,12))}</span><div class="ai-bar-track"><div class="ai-bar-fill" style="width:${Math.round((Number(x.count)||0)/max*100)}%"></div></div><strong>${forecastEscape(x.count)}</strong></div>`).join(''):'<div class="ai-copy">Aucune donnée.</div>';
+
+  const recent=data.recent||{};
+  const recentTarget=document.getElementById('aiRecentTrends');
+  if(recentTarget)recentTarget.innerHTML=`<div class="ai-trends-row">
+    <div class="ai-trend-card"><span>${forecastEscape(recent.todayLabel||"Aujourd’hui")}</span><strong>${forecastEscape(recent.today??0)}</strong></div>
+    <div class="ai-trend-card"><span>${forecastEscape(recent.weekLabel||"7 jours")}</span><strong>${forecastEscape(recent.week??0)}</strong></div>
+    <div class="ai-trend-card"><span>${forecastEscape(recent.peakLabel||"Créneau dominant")}</span><strong>${forecastEscape(recent.peak||'—')}</strong></div>
+  </div>`;
+
+  const hourly=Array.isArray(data.hourly)?data.hourly:[];
+  const hourlyTarget=document.getElementById('aiHourlyTable');
+  if(hourlyTarget)hourlyTarget.innerHTML=`<div class="ai-table-wrap"><table class="ai-table"><thead><tr><th>Créneau</th><th>Occurrences</th><th>Part</th></tr></thead><tbody>${hourly.map(x=>`<tr><td>${forecastEscape(x.label)}</td><td>${forecastEscape(x.count)}</td><td>${forecastEscape(x.share)}</td></tr>`).join('')}</tbody></table></div>`;
+
+  const weekdays=Array.isArray(data.weekdays)?data.weekdays:[];
+  const weekdayTarget=document.getElementById('aiWeekdayTable');
+  if(weekdayTarget)weekdayTarget.innerHTML=`<div class="ai-table-wrap"><table class="ai-table"><thead><tr><th>Jour</th><th>Occurrences</th><th>Part</th></tr></thead><tbody>${weekdays.map(x=>`<tr><td>${forecastEscape(x.label)}</td><td>${forecastEscape(x.count)}</td><td>${forecastEscape(x.share)}</td></tr>`).join('')}</tbody></table></div>`;
+
+  const preds=filterForecastStationRows(data.predictions);
+  const predictionTarget=document.getElementById('aiPredictionTable');
+  if(predictionTarget)predictionTarget.innerHTML=preds.length
+    ? `<div class="ai-table-wrap"><table class="ai-table"><thead><tr><th>Station</th><th>Indice</th><th>Tendance</th></tr></thead><tbody>${preds.map(x=>`<tr><td>${forecastEscape(String(x.station||'').slice(0,15))}</td><td>${forecastEscape(x.score)}</td><td>${forecastEscape(x.trend)}</td></tr>`).join('')}</tbody></table></div>`
+    : '<div class="ai-copy">Aucune estimation disponible.</div>';
+
+  const info=document.querySelector('#aiModal .ai-disclaimer .ai-copy');
+  if(info)info.textContent=data.information||'';
+
+  return true;
+}
+function syncAdminForecastToIndex(){
+  if(renderSharedForecastDashboard())return;
+  renderAIAnalyticsLocalFallback();
+}
+window.addEventListener('storage',e=>{
+  if(e.key===ORNICAR_SHARED_FORECAST_KEY)syncAdminForecastToIndex();
+});
+setInterval(()=>{
+  if(document.getElementById('aiModal')?.classList.contains('open'))syncAdminForecastToIndex();
+},1200);
+
+    function renderAIAnalytics(){
+      if(!renderSharedForecastDashboard())renderAIAnalyticsLocalFallback();
+    }
+
     ['aiSearch','aiPeriod','aiDayType','aiTimeBand'].forEach(id=>document.getElementById(id)?.addEventListener(id==='aiSearch'?'input':'change',renderAIAnalytics));
     
     const aiNavButton=document.getElementById('aiTopBtn');
@@ -5556,11 +5878,12 @@ document.getElementById('aiCloseBtn').onclick=()=>document.getElementById('aiMod
     }
     function renderGlobalHistory(){
       const target=document.getElementById('globalHistoryTable');if(!target)return;
-      const history=[...ARCHIVED_HISTORY].sort((a,b)=>String(b.archivedAt||b.endedAt||b.updated_at||'').localeCompare(String(a.archivedAt||a.endedAt||a.updated_at||'')));
+      const history=[...ARCHIVED_HISTORY].filter(isRealAverseHistoryRow);
       target.innerHTML=history.length
-        ? `<div class="global-history-wrap"><table class="global-history-table"><colgroup><col style="width:15%"><col style="width:30%"><col style="width:12%"><col style="width:25%"><col style="width:18%"></colgroup><thead><tr><th>Date</th><th>Arrêt</th><th>Ligne</th><th>Destination</th></tr></thead><tbody>${history.map(h=>`<tr><td>${formatHistoryDate(h.archivedAt||h.endedAt||h.updated_at)}</td><td title="${h.station||'—'}">${formatHistoryStopName(h.station)}</td><td>${h.line||'—'}</td><td>${h.terminus||'—'}</td></tr>`).join('')}</tbody></table></div>`
-        : '<div class="methodology-text">Aucune averse archivée pour le moment.</div>';
+        ? `<div class="global-history-wrap"><table class="global-history-table"><colgroup><col style="width:18%"><col style="width:25%"><col style="width:12%"><col style="width:25%"><col style="width:20%"></colgroup><thead><tr><th>Date</th><th>Arrêt</th><th>Ligne</th><th>Destination</th><th>Note</th></tr></thead><tbody>${history.map(h=>`<tr><td>${formatHistoryDate(h.ended_at||h.archived_at||h.updated_at||h.created_at)}</td><td title="${h.station||'—'}">${formatHistoryStopName(h.station)}</td><td>${h.line||'—'}</td><td>${h.terminus||h.direction||'—'}</td><td>${h.admin_note||h.description||'—'}</td></tr>`).join('')}</tbody></table></div>`
+        : '<div class="methodology-text">Aucune averse dans l’historique pour le moment.</div>';
     }
+
     function getStationControlHistory(stationName){
       const key=normalizeStopName(stationName);
       return ARCHIVED_HISTORY.filter(x=>normalizeStopName(x.station)===key)
@@ -5578,8 +5901,17 @@ document.getElementById('aiCloseBtn').onclick=()=>document.getElementById('aiMod
       if(m)return `${String(m[1]).padStart(2,'0')}${String(m[2]).padStart(2,'0')}${String(m[3]).slice(-2)}`;
       return String(value).slice(0,6);
     }
+function trackStationView(stop){
+  if(!USER_PROFILE||!stop)return;
+  const key='ornicar_viewed_stops_v2';
+  let ids=[];try{ids=JSON.parse(localStorage.getItem(key)||'[]');if(!Array.isArray(ids))ids=[];}catch(e){ids=[];}
+  const id=stop.id||stopIdForName(stop.name);if(ids.includes(id))return;ids.push(id);localStorage.setItem(key,JSON.stringify(ids));
+  USER_PROFILE.stations_viewed=ids.length;saveUserProfile();
+}
+
     function openStationDetails(name){
       const stop=findStopByName(name);if(!stop)return;
+      trackStationView(stop);
       const probability=getForecastForStop(stop);
       const active=ACTIVE_ALERTS.find(a=>normalizeStopName(a.station)===normalizeStopName(stop.name));
       const is100=Number(String(probability).replace('%',''))===100;
@@ -5599,6 +5931,7 @@ document.getElementById('aiCloseBtn').onclick=()=>document.getElementById('aiMod
     }
     $('stationDetailClose').onclick=()=>$('stationDetailModal').classList.remove('open');
     $('stationDetailModal').onclick=e=>{if(e.target===$('stationDetailModal'))$('stationDetailModal').classList.remove('open');};
+    syncAdminHistoryToIndex();
     function startStartupSplash(){
       const splash=document.getElementById('startupSplash');
       const slides=[...document.querySelectorAll('.startup-slide')];
@@ -5913,6 +6246,9 @@ document.getElementById('aiCloseBtn').onclick=()=>document.getElementById('aiMod
     };
     document.getElementById('complaintForm').onsubmit=async e=>{
       e.preventDefault();
+      const authUser=await ensureFirebaseAuthUser();
+      if(!authUser){showToast('Firebase Auth indisponible.',2600);return;}
+      await reconcileProfileWithFirebaseAuth();
       const type=complaintType.value,cfg=COMPLAINT_CONFIG[type];
       if(!cfg)return;
       const stop=cfg.station?getComplaintStop():null;
@@ -5924,7 +6260,7 @@ document.getElementById('aiCloseBtn').onclick=()=>document.getElementById('aiMod
         id:'claim-'+Date.now(),
         type,
         description:document.getElementById('complaintDescription').value.trim(),
-        status:ORNICAR_STATUS.complaint.pending,
+        status:ORNICAR_STATUS.complaint.open,
         created_at:new Date().toISOString(),
         created_label:new Date().toLocaleString('fr-BE'),
         username:USER_PROFILE?.username||'',
@@ -5934,11 +6270,12 @@ document.getElementById('aiCloseBtn').onclick=()=>document.getElementById('aiMod
       if(cfg.line)item.line=complaintLine.value;
       if(cfg.direction)item.direction=complaintDirection.value;
 
-      const savedToFirebase=await firebaseAdd(FIREBASE_COLLECTIONS.complaints,item,item.id);
+      const savedToFirebase=await firebaseAdd(FIREBASE_COLLECTIONS.issues,issueDbPayload({...item,stop_name:item.station,line_code:item.line,destination:item.direction,user_id:item.user_uid,username_snapshot:item.username}),item.id);
       if(!savedToFirebase){
         showToast('Envoi impossible : Firebase est indisponible.',3000);
         return;
       }
+      if(firebaseEnabled&&USER_PROFILE?.uid)firebaseIncrement(FIREBASE_COLLECTIONS.userStats,USER_PROFILE.uid,{issues_submitted:1});
       incrementContribution();
       renderProfile();
       closeAllComplaintDropdowns();
@@ -6007,6 +6344,7 @@ function renderProfile(){
   
 
   const unlocked=ORNICAR_BADGES.filter(b=>{try{return !!b.check()}catch{return false}});
+  syncUnlockedBadges(unlocked);
   const totalEl=document.getElementById('profileBadgesTotal');
   if(totalEl)totalEl.textContent=String(ORNICAR_BADGES.length);
   const unlockedEl=document.getElementById('profileBadgesUnlocked');
@@ -6042,29 +6380,68 @@ document.getElementById('usernameInput').addEventListener('input',e=>{
 document.getElementById('usernameCreateBtn').addEventListener('click',async()=>{
   const username=document.getElementById('usernameInput').value.trim();
   if(!/^[A-Za-zÀ-ÿ0-9_-]{3,18}$/.test(username))return;
-  USER_PROFILE={uid:createLocalUid(),username,created_at:new Date().toISOString(),reports_count:0,status:'pending'};
+  const authUser=await ensureFirebaseAuthUser();
+  if(!authUser){document.getElementById('usernameError').textContent='Firebase Authentication anonyme n’est pas activé.';showToast('Active Anonymous Authentication dans Firebase.',3200);return;}
+  const draftProfile={uid:authUser.uid,username,created_at:new Date().toISOString(),reports_count:0,status:ORNICAR_STATUS.user.pending};
+  const userDoc={uid:draftProfile.uid,username,status:ORNICAR_STATUS.user.pending,created_at:draftProfile.created_at,validated_at:null,suspended_until:null,last_seen_at:new Date().toISOString()};
+  const saved=await firebaseAdd(FIREBASE_COLLECTIONS.users,userDoc,draftProfile.uid);
+  if(!saved){
+    document.getElementById('usernameError').textContent='Impossible de créer le profil dans Firebase. Vérifie Firestore et les règles.';
+    showToast('Création impossible : Firebase n’a pas enregistré le profil.',3200);
+    return;
+  }
+  USER_PROFILE=draftProfile;
   saveUserProfile();
-  await firebaseAdd(FIREBASE_COLLECTIONS.users,{...USER_PROFILE,status:'pending',validated_at:null,suspended_until:null,last_seen:new Date().toISOString()},USER_PROFILE.uid); USER_ACCOUNT_STATUS='pending'; USER_ACCOUNT_DATA={...USER_PROFILE,status:'pending'}; updateAccountUi();
+  USER_ACCOUNT_STATUS=ORNICAR_STATUS.user.pending;
+  USER_ACCOUNT_DATA={...userDoc};
+  updateAccountUi();
   document.getElementById('usernameModal').classList.remove('open');
   renderProfile();
   requestUserLocation();
+
+  if(firebaseEnabled&&firebaseDb&&USER_PROFILE?.uid)bindCurrentUserRealtime();
 });
 
-function startRealtime(){if(!initFirebase())return;
-      if(USER_PROFILE?.uid){
-        firebaseDb.collection(FIREBASE_COLLECTIONS.users).doc(USER_PROFILE.uid).onSnapshot(doc=>{
-          if(doc.exists){
-            USER_ACCOUNT_DATA={id:doc.id,...doc.data()};
-            USER_ACCOUNT_STATUS=USER_ACCOUNT_DATA.status||ORNICAR_STATUS.user.pending;
-            USER_PROFILE={...USER_PROFILE,...USER_ACCOUNT_DATA};
-            saveUserProfile();updateAccountUi();enforceAccountAccess();renderProfile();
-          }
-        },err=>console.warn('User status sync unavailable',err));
-      }
-      firebaseDb.collection(FIREBASE_COLLECTIONS.active).onSnapshot(s=>{ACTIVE_ALERTS=s.docs.map(d=>({id:d.id,...d.data()}));reconcileLocalPending();renderMap();renderStops();renderControls();});
-      firebaseDb.collection(FIREBASE_COLLECTIONS.history).onSnapshot(s=>{ARCHIVED_HISTORY=s.docs.map(d=>({id:d.id,...d.data()}));renderGlobalHistory();renderDemoCaseHistories();renderAIAnalytics();});
-      firebaseDb.collection(FIREBASE_COLLECTIONS.forecasts).onSnapshot(s=>{FORECASTS=new Map(s.docs.map(d=>[normalizeStopName(d.data().station||d.id),d.data()]));renderMap();renderStops();renderControls();});
-    }
+let USER_REALTIME_UNSUBS=[];
+async function bindCurrentUserRealtime(){
+  if(!firebaseEnabled||!firebaseDb)return;
+  const authUser=await reconcileProfileWithFirebaseAuth();
+  if(!authUser||!USER_PROFILE?.uid||USER_PROFILE.uid!==authUser.uid)return;
+  USER_REALTIME_UNSUBS.forEach(fn=>{try{fn&&fn();}catch(e){}});USER_REALTIME_UNSUBS=[];
+  const uid=USER_PROFILE.uid;
+  USER_REALTIME_UNSUBS.push(firebaseDb.collection(FIREBASE_COLLECTIONS.users).doc(uid).onSnapshot(doc=>{
+    if(!doc.exists)return;USER_ACCOUNT_DATA=canonicalUserView(doc.data(),doc.id);USER_ACCOUNT_STATUS=USER_ACCOUNT_DATA.status||ORNICAR_STATUS.user.pending;USER_PROFILE={...USER_PROFILE,...USER_ACCOUNT_DATA};localStorage.setItem(PROFILE_KEY,JSON.stringify(USER_PROFILE));updateAccountUi();enforceAccountAccess();renderProfile();
+  }));
+  USER_REALTIME_UNSUBS.push(firebaseDb.collection(FIREBASE_COLLECTIONS.userStats).doc(uid).onSnapshot(doc=>{
+    if(!doc.exists)return;const x=doc.data();USER_PROFILE={...USER_PROFILE,reports_count:Number(x.reports_submitted??USER_PROFILE.reports_count??0),validated_reports:Number(x.reports_validated??USER_PROFILE.validated_reports??0),stations_viewed:Number(x.stations_viewed??USER_PROFILE.stations_viewed??0),streak_days:Number(x.streak_days??USER_PROFILE.streak_days??0),last_open_date:x.last_open_date||USER_PROFILE.last_open_date,used_weekend:!!(x.used_weekend||USER_PROFILE.used_weekend),used_night:!!(x.used_night||USER_PROFILE.used_night),used_morning:!!(x.used_morning||USER_PROFILE.used_morning)};localStorage.setItem(PROFILE_KEY,JSON.stringify(USER_PROFILE));renderProfile();
+  }));
+  USER_REALTIME_UNSUBS.push(firebaseDb.collection(FIREBASE_COLLECTIONS.userGameStats).doc(uid).onSnapshot(doc=>{if(!doc.exists)return;mergeGameStatsFromDb(doc.data());localStorage.setItem(GAME_STATS_KEY,JSON.stringify(GAME_STATS));renderProfile();}));
+  USER_REALTIME_UNSUBS.push(firebaseDb.collection(FIREBASE_COLLECTIONS.userBadges).where('user_id','==',uid).onSnapshot(s=>{REMOTE_USER_BADGES=new Set(s.docs.map(d=>d.data().badge_id).filter(Boolean));renderProfile();}));
+}
+
+async function startRealtime(){
+  if(!initFirebase())return;
+  const authUser=await ensureFirebaseAuthUser();
+  if(!authUser){showToast('Firebase Auth non configuré : active la connexion anonyme.',3600);return;}
+  await reconcileProfileWithFirebaseAuth();
+
+  firebaseDb.collection(FIREBASE_COLLECTIONS.alerts).where('status','==','active').onSnapshot(s=>{
+    ACTIVE_ALERTS=s.docs.map(d=>canonicalAlertView(d.data(),d.id));reconcileLocalPending();renderControls();renderMap();
+  },e=>console.warn('active alerts realtime failed',e));
+  firebaseDb.collection(FIREBASE_COLLECTIONS.alerts).where('status','==','ended').onSnapshot(s=>{
+    ARCHIVED_HISTORY=s.docs.map(d=>canonicalAlertView(d.data(),d.id)).sort((a,b)=>String(b.ended_at||b.updated_at||b.created_at||'').localeCompare(String(a.ended_at||a.updated_at||a.created_at||'')));renderGlobalHistory();
+  },e=>console.warn('history realtime failed',e));
+  firebaseDb.collection(FIREBASE_COLLECTIONS.forecasts).onSnapshot(s=>{
+    FORECASTS=new Map(s.docs.map(d=>{const x=forecastView(d.data());return[normalizeStopName(x.stop_name||x.station||d.id),x];}));renderMap();renderControls();renderSharedForecastDashboard();
+  },e=>console.warn('forecast realtime failed',e));
+  firebaseDb.collection(FIREBASE_COLLECTIONS.lines).onSnapshot(s=>{
+    REMOTE_LINES=new Map(s.docs.map(d=>[d.id,{id:d.id,...d.data()}]));REMOTE_LINES.forEach((v,k)=>{if(Array.isArray(v.termini))TERMINI[k]=[...v.termini];});rebuildRemoteNetwork();
+  });
+  firebaseDb.collection(FIREBASE_COLLECTIONS.stops).onSnapshot(s=>{REMOTE_STOP_DOCS=s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.active!==false);rebuildRemoteNetwork();});
+  firebaseDb.collection(FIREBASE_COLLECTIONS.forecastConfig).doc('current').onSnapshot(d=>{if(d.exists)FORECAST_CONFIG=d.data()||{};});
+
+  bindCurrentUserRealtime();
+}
     console.assert(document.querySelectorAll('.startup-slide').length===5,'five startup slides should exist');console.assert(getPredictionWeatherIcon('40%')==='🌫️','40% must use the fog icon');console.assert(getPredictionWeatherMapHtml('40%').includes('weather-fog-map'),'40% map fog should render CSS icon');console.assert(getPredictionWeatherMapHtml('40%').includes('weather-fog-map'),'40% map marker must use stable CSS fog icon');console.assert(document.querySelector('#openStops .icon-bubble-bus svg'),'bus action icon should exist');console.assert(document.querySelector('#openReport .icon-bubble-alert svg'),'warning action icon should exist');console.assert(document.getElementById('stopsModal')&&document.querySelector('#stopsModal .modal'),'stops modal must exist');console.assert(document.body.innerHTML.includes('stop-lines-grid'),'stops modal must use max five correspondences per row');console.assert(document.body.innerHTML.includes('cluster-count-only'),'cluster should display count only');renderControls();renderMap();renderProfile();renderGlobalHistory();renderDemoCaseHistories();applyGameModeVisibility();startRealtime();startStartupSplash();setTimeout(()=>map.invalidateSize(false),250);
   </script>
 </body>
