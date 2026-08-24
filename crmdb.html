@@ -1528,6 +1528,11 @@ main > section.active{
   color:#f8fafc!important;
   font-size:11px!important;
 }
+
+.ai-forecast-insights{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+.ai-forecast-insights .ai-forecast-stat strong{font-size:9px!important;line-height:1.25!important;overflow-wrap:anywhere!important}
+@media(max-width:900px){.ai-forecast-insights{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
 .ai-build-week-btn{
   width:100%!important;
   min-height:34px!important;
@@ -2273,6 +2278,25 @@ body.admin-locked main{filter:blur(5px);pointer-events:none;user-select:none;opa
   
 
 <section id="forecastsAI">
+  <div class="ai-forecast-summary ai-forecast-insights">
+    <div class="ai-forecast-stat">
+      <span>Stations les plus observées</span>
+      <strong id="aiTopStationsKpi">—</strong>
+    </div>
+    <div class="ai-forecast-stat">
+      <span>Créneau dominant</span>
+      <strong id="aiDominantSlotKpi">—</strong>
+    </div>
+    <div class="ai-forecast-stat">
+      <span>7 derniers jours</span>
+      <strong id="aiRecent7Kpi">0</strong>
+    </div>
+    <div class="ai-forecast-stat">
+      <span>Jour dominant</span>
+      <strong id="aiDominantDayKpi">—</strong>
+    </div>
+  </div>
+
   <div class="ai-forecast-summary">
     <div class="ai-forecast-stat">
       <span>Historique utilisé</span>
@@ -3220,7 +3244,6 @@ const FIREBASE_COLLECTIONS={
   userStats:'user_stats',
   badges:'badges',
   userBadges:'user_badges',
-  userGameStats:'user_game_stats',
   stops:'stops',
   lines:'lines',
   forecasts:'station_forecasts',
@@ -3230,12 +3253,12 @@ const FIREBASE_COLLECTIONS={
   admins:'admins'
 };
 const FIREBASE_LEGACY_COLLECTIONS={pending:'reports_pending',active:'active_alerts',archive:'archived_alerts',complaints:'complaints',history:'control_history_v2'};
-const ORNICAR_SCHEMA_VERSION=3;
+const ORNICAR_SCHEMA_VERSION=4;
 let firebaseDb=null,firebaseAuth=null,firebaseEnabled=false;
 let ADMIN_AUTH_USER=null,ADMIN_AUTH_PROFILE=null,ADMIN_APP_STARTED=false,ADMIN_AUTH_OBSERVER=null;
 let ADMIN_REALTIME_UNSUBS=[];
 let REMOTE_LINES=new Map(),REMOTE_STOP_DOCS=[],FORECAST_CONFIG={};
-let USER_BADGES_BY_USER=new Map(),USER_GAME_STATS_BY_USER=new Map(),USER_STATS_BY_USER=new Map();
+let USER_BADGES_BY_USER=new Map(),USER_STATS_BY_USER=new Map();
 
 function initFirebase(){
   try{
@@ -3265,14 +3288,35 @@ async function readAdminProfile(user){
   try{const doc=await firebaseDb.collection(FIREBASE_COLLECTIONS.admins).doc(user.uid).get();return doc.exists?{id:doc.id,...doc.data()}:null;}catch(error){console.warn('Admin role check failed',error);throw error;}
 }
 function stopAdminRealtime(){ADMIN_REALTIME_UNSUBS.splice(0).forEach(fn=>{try{fn&&fn();}catch(e){}});}
+
+async function primeForecastInputsFromFirestore(){
+  if(!firebaseEnabled||!firebaseDb)return;
+  try{
+    const [endedSnap,activeSnap,forecastSnap,configDoc]=await Promise.all([
+      firebaseDb.collection(FIREBASE_COLLECTIONS.alerts).where('status','==','ended').get(),
+      firebaseDb.collection(FIREBASE_COLLECTIONS.alerts).where('status','==','active').get(),
+      firebaseDb.collection(FIREBASE_COLLECTIONS.forecasts).get(),
+      firebaseDb.collection(FIREBASE_COLLECTIONS.forecastConfig).doc('current').get()
+    ]);
+    ARCHIVED=endedSnap.docs.map(d=>canonicalAlertView(d.data(),d.id)).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+    ACTIVE=activeSnap.docs.map(d=>canonicalAlertView(d.data(),d.id));
+    FORECASTS=new Map(forecastSnap.docs.map(d=>{const data=forecastView(d.data());return[normalizeStopName(data.stop_name||data.station||d.id),data];}));
+    if(configDoc.exists)FORECAST_CONFIG=configDoc.data()||{};
+    ALL_STOPS.forEach(station=>syncStationVisualState(station));
+    persistHistory();
+    renderAIForecastSummary();
+  }catch(error){console.warn('Préchargement IA Firestore impossible',error);}
+}
+
 async function startAdminApp(){
   if(ADMIN_APP_STARTED)return;
   ADMIN_APP_STARTED=true;
   hydrateHistory();
   renderPending();renderActive();renderArchive();renderComplaints();renderStations();renderUsers();activateAdminTab('pending');
   await bootstrapSharedFirestore();
+  await primeForecastInputsFromFirestore();
   startRealtime();
-  initializeAIDailyGeneration();
+  initializeAIDailyGeneration(true);
   logAdminAction('admin_login',ADMIN_AUTH_USER?.uid||'',{email:ADMIN_AUTH_USER?.email||'',role:ADMIN_AUTH_PROFILE?.role||''});
 }
 async function handleAdminAuthState(user){
@@ -3461,7 +3505,10 @@ async function batchSetDocuments(collection,rows,idFn,payloadFn){
 }
 
 const ORNICAR_BADGE_DEFINITIONS=[
-  ['first_open','usage','Premier lancement','🚀'],['first_report','usage','Premier signalement','🌦'],['play_ornimons','games','Premier Ornimons','✨'],['collect_ornimon','games','Premier Ornimons capturé','🔮'],['collect_all','games','Collection complète','👑'],['play_memory','games','Premier Memornicar','🧠'],['win_memory','games','Memornicar terminé','🃏'],['play_xox','games','Premier XOX','❌'],['win_xox','games','Victoire XOX','⭕'],['play_connect','games','Premier Orni 4','🟠'],['win_connect','games','Victoire Orni 4','🏆'],['streak_2','progress','2 jours d’affilée','🔥'],['streak_3','progress','3 jours d’affilée','🔥'],['streak_7','progress','7 jours d’affilée','🔥'],['streak_14','progress','14 jours d’affilée','🌟'],['streak_30','progress','30 jours d’affilée','💫'],['reports_5','progress','5 averses signalées','🌧'],['reports_10','progress','10 averses signalées','⛈'],['reports_20','progress','20 averses signalées','🌩'],['reports_50','progress','50 averses signalées','⚡'],['reports_100','progress','100 averses signalées','🌪'],['memory_20','games','Memory ≤ 20 coups','🧩'],['memory_16','games','Memory ≤ 16 coups','🧩'],['memory_12','games','Memory ≤ 12 coups','🧩'],['xox_3','games','3 victoires XOX','❎'],['xox_10','games','10 victoires XOX','❎'],['connect_3','games','3 victoires Orni 4','🔴'],['connect_10','games','10 victoires Orni 4','🔴'],['ornimons_3','games','3 Ornimons','🔹'],['ornimons_5','games','5 Ornimons','🔷'],['profile_created','usage','Profil créé','👤'],['username_set','usage','Pseudo choisi','✍️'],['explorer','progress','Explorateur','🧭'],['explorer_50','progress','Grand explorateur','🗺️'],['helper','progress','Signalement utile','✅'],['helper_10','progress','10 signalements validés','🏅']
+  ['first_open','usage','Premier lancement','🚀'],['first_report','usage','Premier signalement','🌦'],
+  ['streak_2','progress','2 jours d’affilée','🔥'],['streak_3','progress','3 jours d’affilée','🔥'],['streak_7','progress','7 jours d’affilée','🔥'],['streak_14','progress','14 jours d’affilée','🌟'],['streak_30','progress','30 jours d’affilée','💫'],
+  ['reports_5','progress','5 averses signalées','🌧'],['reports_10','progress','10 averses signalées','⛈'],['reports_20','progress','20 averses signalées','🌩'],['reports_50','progress','50 averses signalées','⚡'],['reports_100','progress','100 averses signalées','🌪'],
+  ['profile_created','usage','Profil créé','👤'],['username_set','usage','Pseudo choisi','✍️'],['explorer','progress','Explorateur','🧭'],['explorer_50','progress','Grand explorateur','🗺️'],['helper','progress','Signalement utile','✅'],['helper_10','progress','10 signalements validés','🏅']
 ].map(([id,category,name,icon],sort_order)=>({id,category,name,icon,sort_order,active:true}));
 
 async function migrateLegacyCollection(sourceCollection,targetCollection,mapper){
@@ -3472,9 +3519,32 @@ async function migrateLegacyCollection(sourceCollection,targetCollection,mapper)
     await batchSetDocuments(targetCollection,rows,x=>x.id,x=>mapper(x));
   }catch(error){console.warn('Legacy migration skipped',sourceCollection,error);}
 }
+
+const LEGACY_GAME_BADGE_IDS=new Set(['play_ornimons','collect_ornimon','collect_all','play_memory','win_memory','play_xox','win_xox','play_connect','win_connect','memory_20','memory_16','memory_12','xox_3','xox_10','connect_3','connect_10','ornimons_3','ornimons_5']);
+async function deleteSnapshotDocs(snapshot){
+  if(!snapshot||!Array.isArray(snapshot.docs)||!snapshot.docs.length)return 0;
+  let deleted=0,batch=firebaseDb.batch(),ops=0;
+  for(const doc of snapshot.docs){
+    batch.delete(doc.ref);ops++;deleted++;
+    if(ops>=450){await batch.commit();batch=firebaseDb.batch();ops=0;}
+  }
+  if(ops)await batch.commit();
+  return deleted;
+}
+async function cleanupLegacyGameData(){
+  try{
+    const gameStats=await firebaseDb.collection('user_game_stats').get();
+    await deleteSnapshotDocs({docs:gameStats.docs});
+    const badgeSnap=await firebaseDb.collection(FIREBASE_COLLECTIONS.badges).get();
+    await deleteSnapshotDocs({docs:badgeSnap.docs.filter(d=>LEGACY_GAME_BADGE_IDS.has(d.id)||String(d.data()?.category||'')==='games')});
+    const userBadgeSnap=await firebaseDb.collection(FIREBASE_COLLECTIONS.userBadges).get();
+    await deleteSnapshotDocs({docs:userBadgeSnap.docs.filter(d=>LEGACY_GAME_BADGE_IDS.has(String(d.data()?.badge_id||'')))});
+  }catch(error){console.warn('Nettoyage des anciennes données jeux ignoré',error);}
+}
+
 async function bootstrapSharedFirestore(){
   if(!firebaseEnabled||!firebaseDb)return;
-  const markerRef=firebaseDb.collection(FIREBASE_COLLECTIONS.systemMeta).doc('ornicar_schema_v3');
+  const markerRef=firebaseDb.collection(FIREBASE_COLLECTIONS.systemMeta).doc('ornicar_schema_v4');
   try{
     const marker=await markerRef.get();
     if(marker.exists&&Number(marker.data()?.version)>=ORNICAR_SCHEMA_VERSION&&marker.data()?.state==='complete')return;
@@ -3483,6 +3553,7 @@ async function bootstrapSharedFirestore(){
     const allCodes=[...new Set(ALL_STOPS.flatMap(s=>(s.lines||[]).map(getLineCode)))];
     await batchSetDocuments(FIREBASE_COLLECTIONS.lines,allCodes,code=>code,code=>lineDbPayload(code,TERMINI[code]||[]));
     await batchSetDocuments(FIREBASE_COLLECTIONS.stops,ALL_STOPS,s=>stopIdForName(s.name),s=>stopDbPayload(s));
+    await cleanupLegacyGameData();
     await batchSetDocuments(FIREBASE_COLLECTIONS.badges,ORNICAR_BADGE_DEFINITIONS,b=>b.id,b=>({...b,updated_at:new Date().toISOString()}));
 
     const historical=applyEstimatedHistoryTimes(ORNICAR_BASE_HISTORY.map(x=>({...x,status:'ended',source_type:'historical_import'})));
@@ -4528,18 +4599,6 @@ function userBadges(user){
   if(cloud.length)return cloud.map(x=>x.badge_name||x.badge_id||x.id).filter(Boolean);
   return Array.isArray(user?.badges)?user.badges.filter(Boolean):[];
 }
-function userGameStatsSummary(user){
-  const uid=String(user?.uid||user?.id||'');
-  const g=USER_GAME_STATS_BY_USER.get(uid)||{};
-  const orn=g.ornimons||{},mem=g.memornicar||{},xox=g.xox||{},o4=g.orni4||{},cam=g.ornicameleon||{};
-  return [
-    ['Ornimons',Array.isArray(orn.caught_ids)?`${orn.caught_ids.length} capturé(s)`:'—'],
-    ['Memornicar',mem.best_moves?`Meilleur : ${mem.best_moves} coups`:'—'],
-    ['XOX',`${Number(xox.wins||0)} victoire(s)`],
-    ['Orni 4',`${Number(o4.wins||0)} victoire(s)`],
-    ['Ornicaméléon',cam.best_found?`Meilleur : ${cam.best_found}`:'—']
-  ];
-}
 function userStatsSummary(user){
   const uid=String(user?.uid||user?.id||'');
   const st=USER_STATS_BY_USER.get(uid)||{};
@@ -4599,13 +4658,6 @@ function renderUserDetail(){
       <span class="user-detail-section-title">Statistiques</span>
       <div class="user-mini-list">
         ${userStatsSummary(user).map(([k,v])=>`<div class="user-mini-row"><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v)}</span></div>`).join('')}
-      </div>
-    </div>
-
-    <div class="user-detail-section">
-      <span class="user-detail-section-title">Jeux / progression</span>
-      <div class="user-mini-list">
-        ${userGameStatsSummary(user).map(([k,v])=>`<div class="user-mini-row"><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v)}</span></div>`).join('')}
       </div>
     </div>
 
@@ -4674,13 +4726,7 @@ function aiDayLabel(dayIndex){
 }
 function aiHourBucket(date){
   const h=date.getHours();
-  if(h<6)return 5;
-  if(h<9)return 8;
-  if(h<12)return 11;
-  if(h<15)return 14;
-  if(h<18)return 17;
-  if(h<21)return 20;
-  return 23;
+  return Math.floor(h/2)*2;
 }
 function aiHistoricalRows(){
   return [...ARCHIVED].filter(x=>x&&x.station&&x.created_at);
@@ -4737,19 +4783,52 @@ function aiBestHourForStation(station,date){
   if(!counts.size)return aiHourBucket(date);
   return [...counts.entries()].sort((a,b)=>b[1]-a[1])[0][0];
 }
+function aiObservationDate(row){
+  for(const v of [row?.created_at,row?.started_at,row?.observed_at,row?.validated_at,row?.updated_at,row?.ended_at]){
+    if(!v)continue;
+    const d=new Date(v);
+    if(!Number.isNaN(d.getTime()))return d;
+  }
+  return null;
+}
+function aiHistorySlotAnalytics(rows){
+  const slots=currentHourlyRatios().map(slot=>({start:Number(slot.start),end:Number(slot.end),count:0,label:`${String(slot.start).padStart(2,'0')}:00–${String(slot.end).padStart(2,'0')}:00`}));
+  rows.forEach(row=>{
+    const d=aiObservationDate(row);if(!d)return;
+    const h=d.getHours();const slot=slots.find(x=>h>=x.start&&h<x.end);if(slot)slot.count++;
+  });
+  return slots;
+}
 function renderAIForecastSummary(){
   const history=aiHistoricalRows();
-
-  if(!AI_LAST_GENERATED_AT){
-    try{AI_LAST_GENERATED_AT=localStorage.getItem('ornicar_ai_last_generation_at')||null;}catch(e){}
-  }
+  if(!AI_LAST_GENERATED_AT){try{AI_LAST_GENERATED_AT=localStorage.getItem('ornicar_ai_last_generation_at')||null;}catch(e){}}
 
   if($('aiHistoryCount'))$('aiHistoryCount').textContent=String(history.length);
   if($('aiStationsCount'))$('aiStationsCount').textContent=String(ALL_STOPS.length);
   if($('aiLastGenerated'))$('aiLastGenerated').textContent=AI_LAST_GENERATED_AT
     ? new Date(AI_LAST_GENERATED_AT).toLocaleString('fr-BE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
     :'—';
+
+  const stationCounts={};
+  history.forEach(row=>{const key=normalizeStopName(row.station||row.stop_name||'');if(key)stationCounts[key]=(stationCounts[key]||0)+1;});
+  const topStations=Object.entries(stationCounts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'fr')).slice(0,3);
+  if($('aiTopStationsKpi'))$('aiTopStationsKpi').textContent=topStations.length?topStations.map(([station,count])=>`${station} ${count}`).join(' · '):'—';
+
+  const slots=aiHistorySlotAnalytics(history);
+  const peak=slots.reduce((best,slot)=>slot.count>best.count?slot:best,{count:0,label:'—'});
+  const share=history.length&&peak.count?Math.round(peak.count/history.length*100):0;
+  if($('aiDominantSlotKpi'))$('aiDominantSlotKpi').textContent=peak.count?`${peak.label} · ${share}%`:'—';
+
+  const now=Date.now();
+  const recent7=history.filter(row=>{const d=aiObservationDate(row);return d&&now-d.getTime()<=7*86400000;}).length;
+  if($('aiRecent7Kpi'))$('aiRecent7Kpi').textContent=String(recent7);
+
+  const dayCounts=[0,0,0,0,0,0,0];
+  history.forEach(row=>{const d=aiObservationDate(row);if(d)dayCounts[d.getDay()]++;});
+  const bestDay=Math.max(...dayCounts),bestDayIndex=dayCounts.indexOf(bestDay);
+  if($('aiDominantDayKpi'))$('aiDominantDayKpi').textContent=bestDay?`${aiDayLabel(bestDayIndex)} · ${bestDay}`:'—';
 }
+
 
 let AI_FORECAST_SORT_KEY='date';
 let AI_FORECAST_SORT_DIR='asc';
@@ -5001,12 +5080,12 @@ function scheduleNextAIMidnightGeneration(){
   },Math.max(1000,next.getTime()-now.getTime()));
 }
 
-function initializeAIDailyGeneration(){
+function initializeAIDailyGeneration(force=false){
   const today=localCalendarDateKey();
   let last='';
   try{last=localStorage.getItem('ornicar_ai_last_daily_generation_date')||'';}catch(e){}
 
-  if(last!==today){
+  if(force||last!==today){
     generateAndApplyTodayForecasts(false);
   }
   scheduleNextAIMidnightGeneration();
@@ -6085,18 +6164,17 @@ function startRealtime(){
     PENDING=rows.filter(x=>x.status==='pending').sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')));
     ACTIVE=rows.filter(x=>x.status==='active').sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')));
     ARCHIVED=rows.filter(x=>x.status==='ended').sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
-    notifyOnIncrease('pending',PENDING.length);ALL_STOPS.forEach(station=>syncStationVisualState(station));persistHistory();renderPending();renderActive();renderArchive();renderStations();
+    notifyOnIncrease('pending',PENDING.length);ALL_STOPS.forEach(station=>syncStationVisualState(station));persistHistory();renderPending();renderActive();renderArchive();renderStations();renderAIForecastSummary();
   },'alerts realtime failed');
 
   listen(firebaseDb.collection(FIREBASE_COLLECTIONS.issues),s=>{COMPLAINTS=s.docs.map(d=>canonicalIssueView(d.data(),d.id));notifyOnIncrease('complaints',COMPLAINTS.filter(x=>x.status==='open').length);renderComplaints();},'issues realtime failed');
-  listen(firebaseDb.collection(FIREBASE_COLLECTIONS.forecasts),s=>{FORECASTS=new Map(s.docs.map(d=>{const data=forecastView(d.data());return[normalizeStopName(data.stop_name||data.station||d.id),data];}));renderStations();},'forecast realtime failed');
+  listen(firebaseDb.collection(FIREBASE_COLLECTIONS.forecasts),s=>{FORECASTS=new Map(s.docs.map(d=>{const data=forecastView(d.data());return[normalizeStopName(data.stop_name||data.station||d.id),data];}));renderStations();renderAIForecastSummary();},'forecast realtime failed');
   listen(firebaseDb.collection(FIREBASE_COLLECTIONS.users),s=>{USERS=s.docs.map(d=>canonicalUserView(d.data(),d.id));notifyOnIncrease('users',USERS.length);renderUsers();},'users realtime failed');
   listen(firebaseDb.collection(FIREBASE_COLLECTIONS.userStats),s=>{USER_STATS_BY_USER=new Map(s.docs.map(d=>[d.id,d.data()]));if(USER_DETAIL_ID)renderUserDetail();},'user stats realtime failed');
-  listen(firebaseDb.collection(FIREBASE_COLLECTIONS.userGameStats),s=>{USER_GAME_STATS_BY_USER=new Map(s.docs.map(d=>[d.id,d.data()]));if(USER_DETAIL_ID)renderUserDetail();},'game stats realtime failed');
   listen(firebaseDb.collection(FIREBASE_COLLECTIONS.userBadges),s=>{USER_BADGES_BY_USER=new Map();s.docs.forEach(d=>{const x=d.data(),uid=String(x.user_id||'');if(!uid)return;const arr=USER_BADGES_BY_USER.get(uid)||[];arr.push({id:d.id,...x});USER_BADGES_BY_USER.set(uid,arr);});if(USER_DETAIL_ID)renderUserDetail();},'user badges realtime failed');
   listen(firebaseDb.collection(FIREBASE_COLLECTIONS.lines),s=>{REMOTE_LINES=new Map(s.docs.map(d=>[d.id,{id:d.id,...d.data()}]));REMOTE_LINES.forEach((v,k)=>{if(Array.isArray(v.termini))TERMINI[k]=[...v.termini];});rebuildRemoteNetwork();},'lines realtime failed');
   listen(firebaseDb.collection(FIREBASE_COLLECTIONS.stops),s=>{REMOTE_STOP_DOCS=s.docs.map(d=>({id:d.id,...d.data()})).filter(x=>x.active!==false);rebuildRemoteNetwork();},'stops realtime failed');
-  listen(firebaseDb.collection(FIREBASE_COLLECTIONS.forecastConfig).doc('current'),d=>{if(d.exists)FORECAST_CONFIG=d.data()||{};},'forecast config realtime failed');
+  listen(firebaseDb.collection(FIREBASE_COLLECTIONS.forecastConfig).doc('current'),d=>{if(d.exists)FORECAST_CONFIG=d.data()||{};renderAIForecastSummary();},'forecast config realtime failed');
 }
 initializeAdminAuth();
 </script>
